@@ -21,11 +21,7 @@ from itertools import islice as _islice
 import numpy as _np
 from sys import byteorder as _byteorder
 
-
-try:
-    _range = xrange
-except NameError:
-    _range = range
+from past.builtins import xrange
 
 
 # Many-many relation
@@ -661,7 +657,7 @@ class PlyElement(object):
         '''
         self._data = _np.empty(self.count, dtype=self.dtype(byte_order))
 
-        for k in _range(self.count):
+        for k in xrange(self.count):
             for prop in self.properties:
                 try:
                     self._data[prop.name][k] = \

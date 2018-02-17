@@ -1,16 +1,14 @@
 import argparse
-import subprocess
 import tensorflow as tf
 import numpy as np
-from datetime import datetime
 import json
 import os
-import sys
+from pointnet import provider
+from . import pointnet_part_seg as model
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
-sys.path.append(os.path.dirname(BASE_DIR))
-import provider
-import pointnet_part_seg as model
+
 
 # DEFAULT SETTINGS
 parser = argparse.ArgumentParser()
@@ -22,7 +20,7 @@ parser.add_argument('--output_dir', type=str, default='train_results', help='Dir
 parser.add_argument('--wd', type=float, default=0, help='Weight Decay [Default: 0.0]')
 FLAGS = parser.parse_args()
 
-hdf5_data_dir = os.path.join(BASE_DIR, './hdf5_data')
+hdf5_data_dir = os.path.join(BASE_DIR, 'hdf5_data')
 
 # MAIN SCRIPT
 point_num = FLAGS.point_num

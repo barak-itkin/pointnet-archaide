@@ -1,12 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import math
-import os
-import sys
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(BASE_DIR))
-sys.path.append(os.path.join(BASE_DIR, '../utils'))
-import tf_util
+from pointnet.utils import tf_util
 
 
 def get_transform_K(inputs, is_training, bn_decay=None, K = 3):
@@ -35,9 +29,6 @@ def get_transform_K(inputs, is_training, bn_decay=None, K = 3):
     #transform = tf_util.fully_connected(net, 3*K, activation_fn=None, scope='tfc3')
     transform = tf.reshape(transform, [batch_size, K, K])
     return transform
-
-
-
 
 
 def get_transform(point_cloud, is_training, bn_decay=None, K = 3):

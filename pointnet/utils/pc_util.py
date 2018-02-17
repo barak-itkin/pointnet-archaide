@@ -10,11 +10,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 
 # Draw point cloud
-from eulerangles import euler2mat
+from .eulerangles import euler2mat
 
 # Point cloud IO
 import numpy as np
-from plyfile import PlyData, PlyElement
+from .plyfile import PlyData, PlyElement
 
  
 # ----------------------------------------

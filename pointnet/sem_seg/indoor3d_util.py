@@ -1,17 +1,18 @@
 import numpy as np
 import glob
 import os
-import sys
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
-sys.path.append(BASE_DIR)
+
 
 # -----------------------------------------------------------------------------
 # CONSTANTS
 # -----------------------------------------------------------------------------
 
 DATA_PATH = os.path.join(ROOT_DIR, 'data', 'Stanford3dDataset_v1.2_Aligned_Version')
-g_classes = [x.rstrip() for x in open(os.path.join(BASE_DIR, 'meta/class_names.txt'))]
+g_classes = [x.rstrip() for x in open(os.path.join(BASE_DIR, 'meta', 'class_names.txt'))]
 g_class2label = {cls: i for i,cls in enumerate(g_classes)}
 g_class2color = {'ceiling':	[0,255,0],
                  'floor':	[0,0,255],

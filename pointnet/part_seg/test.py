@@ -3,12 +3,11 @@ import tensorflow as tf
 import json
 import numpy as np
 import os
-import sys
+from . import pointnet_part_seg as model
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
-sys.path.append(os.path.dirname(BASE_DIR))
-import provider
-import pointnet_part_seg as model
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_path', default='train_results/trained_models/epoch_190.ckpt', help='Model checkpoint path')
@@ -16,11 +15,11 @@ FLAGS = parser.parse_args()
 
 
 # DEFAULT SETTINGS
-pretrained_model_path = FLAGS.model_path # os.path.join(BASE_DIR, './pretrained_model/model.ckpt')
-hdf5_data_dir = os.path.join(BASE_DIR, './hdf5_data')
-ply_data_dir = os.path.join(BASE_DIR, './PartAnnotation')
+pretrained_model_path = FLAGS.model_path # os.path.join(BASE_DIR, 'pretrained_model', 'model.ckpt')
+hdf5_data_dir = os.path.join(BASE_DIR, 'hdf5_data')
+ply_data_dir = os.path.join(BASE_DIR, 'PartAnnotation')
 gpu_to_use = 0
-output_dir = os.path.join(BASE_DIR, './test_results')
+output_dir = os.path.join(BASE_DIR, 'test_results')
 output_verbose = True   # If true, output all color-coded part segmentation obj files
 
 # MAIN SCRIPT
@@ -55,8 +54,8 @@ NUM_PART_CATS = 50
 cpid2oid = json.load(open(os.path.join(hdf5_data_dir, 'catid_partid_to_overallid.json'), 'r'))
 
 def printout(flog, data):
-	print(data)
-	flog.write(data + '\n')
+    print(data)
+    flog.write(data + '\n')
 
 def output_color_point_cloud(data, seg, out_file):
     with open(out_file, 'w') as f:

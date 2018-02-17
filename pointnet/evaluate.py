@@ -3,16 +3,13 @@ import numpy as np
 import argparse
 import socket
 import importlib
-import time
 import os
 import scipy.misc
-import sys
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
-sys.path.append(os.path.join(BASE_DIR, 'models'))
-sys.path.append(os.path.join(BASE_DIR, 'utils'))
-import provider
-import pc_util
+from pointnet import provider
+from pointnet.utils import pc_util
+
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
 
 parser = argparse.ArgumentParser()
@@ -38,15 +35,15 @@ LOG_FOUT.write(str(FLAGS)+'\n')
 
 NUM_CLASSES = 40
 SHAPE_NAMES = [line.rstrip() for line in \
-    open(os.path.join(BASE_DIR, 'data/modelnet40_ply_hdf5_2048/shape_names.txt'))] 
+    open(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048', 'shape_names.txt'))]
 
 HOSTNAME = socket.gethostname()
 
 # ModelNet40 official train/test split
-TRAIN_FILES = provider.getDataFiles( \
-    os.path.join(BASE_DIR, 'data/modelnet40_ply_hdf5_2048/train_files.txt'))
-TEST_FILES = provider.getDataFiles(\
-    os.path.join(BASE_DIR, 'data/modelnet40_ply_hdf5_2048/test_files.txt'))
+TRAIN_FILES = provider.getDataFiles(
+    os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048', 'train_files.txt'))
+TEST_FILES = provider.getDataFiles(
+    os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048', 'test_files.txt'))
 
 def log_string(out_str):
     LOG_FOUT.write(out_str+'\n')

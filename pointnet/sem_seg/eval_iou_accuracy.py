@@ -1,4 +1,6 @@
 import numpy as np
+from past.builtins import xrange
+
 
 pred_data_label_filenames = [line.rstrip() for line in open('all_pred_data_label_filelist.txt')]
 gt_label_filenames = [f.rstrip('_pred\.txt') + '_gt.txt' for f in pred_data_label_filenames]
@@ -29,7 +31,7 @@ print(true_positive_classes)
 
 print('Overall accuracy: {0}'.format(sum(true_positive_classes)/float(sum(positive_classes))))
 
-print 'IoU:'
+print('IoU:')
 iou_list = []
 for i in range(13):
     iou = true_positive_classes[i]/float(gt_classes[i]+positive_classes[i]-true_positive_classes[i]) 

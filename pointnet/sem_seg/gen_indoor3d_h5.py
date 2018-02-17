@@ -1,12 +1,12 @@
 import os
 import numpy as np
-import sys
+from pointnet.utils import data_prep_util
+from . import indoor3d_util
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
-sys.path.append(BASE_DIR)
-sys.path.append(os.path.join(ROOT_DIR, 'utils'))
-import data_prep_util
-import indoor3d_util
+
 
 # Constants
 data_dir = os.path.join(ROOT_DIR, 'data')
@@ -19,7 +19,7 @@ data_dtype = 'float32'
 label_dtype = 'uint8'
 
 # Set paths
-filelist = os.path.join(BASE_DIR, 'meta/all_data_label.txt')
+filelist = os.path.join(BASE_DIR, 'meta', 'all_data_label.txt')
 data_label_files = [os.path.join(indoor3d_data_dir, line.rstrip()) for line in open(filelist)]
 output_dir = os.path.join(data_dir, 'indoor3d_sem_seg_hdf5_data')
 if not os.path.exists(output_dir):

@@ -8,12 +8,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
-sys.path.append(os.path.join(BASE_DIR, 'models'))
-sys.path.append(os.path.join(BASE_DIR, 'utils'))
-
-import provider
+from pointnet import provider
 
 
 NUM_CLASSES = 40
@@ -259,6 +254,8 @@ if __name__ == "__main__":
     init_logging()
 
     logging.info(FLAGS)
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     MODEL = importlib.import_module(FLAGS.model)  # import network module
     MODEL_FILE = os.path.join(BASE_DIR, 'models', FLAGS.model + '.py')

@@ -1,11 +1,9 @@
 import os
-import sys
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
-from plyfile import (PlyData, PlyElement, make2d, PlyParseError, PlyProperty)
+from .plyfile import (PlyData, PlyElement, make2d, PlyParseError, PlyProperty)
 import numpy as np
 import h5py
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SAMPLING_BIN = os.path.join(BASE_DIR, 'third_party/mesh_sampling/build/pcsample')
 
 SAMPLING_POINT_NUM = 2048
@@ -13,11 +11,11 @@ SAMPLING_LEAF_SIZE = 0.005
 
 MODELNET40_PATH = '../datasets/modelnet40'
 def export_ply(pc, filename):
-	vertex = np.zeros(pc.shape[0], dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4')])
-	for i in range(pc.shape[0]):
-		vertex[i] = (pc[i][0], pc[i][1], pc[i][2])
-	ply_out = PlyData([PlyElement.describe(vertex, 'vertex', comments=['vertices'])])
-	ply_out.write(filename)
+    vertex = np.zeros(pc.shape[0], dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4')])
+    for i in range(pc.shape[0]):
+        vertex[i] = (pc[i][0], pc[i][1], pc[i][2])
+    ply_out = PlyData([PlyElement.describe(vertex, 'vertex', comments=['vertices'])])
+    ply_out.write(filename)
 
 # Sample points on the obj shape
 def get_sampling_command(obj_filename, ply_filename):
@@ -58,7 +56,7 @@ def batch_mkdir(output_folder, subdir_list):
 
 # Write numpy array data and label to h5_filename
 def save_h5_data_label_normal(h5_filename, data, label, normal, 
-		data_dtype='float32', label_dtype='uint8', noral_dtype='float32'):
+        data_dtype='float32', label_dtype='uint8', noral_dtype='float32'):
     h5_fout = h5py.File(h5_filename)
     h5_fout.create_dataset(
             'data', data=data,
