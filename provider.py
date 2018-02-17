@@ -1,20 +1,23 @@
 import os
-import sys
 import numpy as np
 import h5py
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
+import urllib.request
+import zipfile
 
-# Download dataset for point cloud classification
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-if not os.path.exists(DATA_DIR):
-    os.mkdir(DATA_DIR)
-if not os.path.exists(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048')):
-    www = 'https://shapenet.cs.stanford.edu/media/modelnet40_ply_hdf5_2048.zip'
-    zipfile = os.path.basename(www)
-    os.system('wget %s; unzip %s' % (www, zipfile))
-    os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
-    os.system('rm %s' % (zipfile))
+
+def download_modelnet40(dst_dir):
+    """Download dataset for point cloud classification"""
+    if not os.path.exists(os.path.join(dst_dir, 'modelnet40_ply_hdf5_2048')):
+        os.makedirs(dst_dir, exist_ok=True)
+
+        www = 'https://shapenet.cs.stanford.edu/media/modelnet40_ply_hdf5_2048.zip'
+        zip_name = os.path.join(dst_dir, 'modelnet40_ply_hdf5_2048.zip')
+
+        urllib.request.urlretrieve(www, filename=zipfile)
+        with zipfile.ZipFile(zip_name) as archive:
+            archive.extractall(dst_dir)
+
+        os.remove(zip_name)
 
 
 def shuffle_data(data, labels):
@@ -84,8 +87,10 @@ def jitter_point_cloud(batch_data, sigma=0.01, clip=0.05):
     jittered_data += batch_data
     return jittered_data
 
+
 def getDataFiles(list_filename):
     return [line.rstrip() for line in open(list_filename)]
+
 
 def load_h5(h5_filename):
     f = h5py.File(h5_filename)
@@ -93,8 +98,10 @@ def load_h5(h5_filename):
     label = f['label'][:]
     return (data, label)
 
+
 def loadDataFile(filename):
     return load_h5(filename)
+
 
 def load_h5_data_label_seg(h5_filename):
     f = h5py.File(h5_filename)
