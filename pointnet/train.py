@@ -38,7 +38,7 @@ def get_bn_decay(batch):
 
 def train():
     with tf.Graph().as_default():
-        with tf.device('/gpu:%d' % FLAGS.gpu):
+        with get_device():
             pointclouds_pl, labels_pl = MODEL.placeholder_inputs(FLAGS.batch_size, FLAGS.num_point)
             is_training_pl = tf.placeholder(tf.bool, shape=())
             print(is_training_pl)
@@ -214,6 +214,13 @@ def init_logging():
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formatter)
     root_logger.addHandler(console_handler)
+
+
+def get_device():
+    if FLAGS.gpu >= 0:
+        return tf.device('/device:GPU:%d' % FLAGS.gpu)
+    else:
+        return tf.device('/cpu:0')
 
 
 if __name__ == "__main__":

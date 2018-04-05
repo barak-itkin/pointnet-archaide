@@ -4,24 +4,25 @@ from pointnet.utils import tf_util
 from .transform_nets import input_transform_net, feature_transform_net
 
 
-def placeholder_inputs(batch_size, num_point):
-    pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, 3))
+def placeholder_inputs(batch_size, num_point, K=3):
+    pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, K))
     labels_pl = tf.placeholder(tf.int32, shape=(batch_size))
     return pointclouds_pl, labels_pl
 
 
-def get_model(point_cloud, is_training, bn_decay=None):
-    """ Classification PointNet, input is BxNx3, output Bx40 """
+def get_model(point_cloud, is_training, bn_decay=None, K=3):
+    """ Classification PointNet, input is BxNxK, output Bx40 """
     batch_size = point_cloud.get_shape()[0].value
     num_point = point_cloud.get_shape()[1].value
     end_points = {}
 
     with tf.variable_scope('transform_net1') as sc:
-        transform = input_transform_net(point_cloud, is_training, bn_decay, K=3)
+        transform = input_transform_net(point_cloud, is_training, bn_decay, K=K)
     point_cloud_transformed = tf.matmul(point_cloud, transform)
+    # Shape the pointcloud as an image with one channel (append an axis)
     input_image = tf.expand_dims(point_cloud_transformed, -1)
 
-    net = tf_util.conv2d(input_image, 64, [1,3],
+    net = tf_util.conv2d(input_image, 64, [1,K],
                          padding='VALID', stride=[1,1],
                          bn=True, is_training=is_training,
                          scope='conv1', bn_decay=bn_decay)
