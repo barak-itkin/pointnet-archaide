@@ -1,4 +1,5 @@
 import argparse
+from collections import namedtuple
 import importlib
 import logging
 import os
@@ -13,6 +14,11 @@ from pointnet import provider
 
 NUM_CLASSES = 40
 
+Operations = namedtuple(
+    'Operations',
+    ['pointclouds_pl', 'labels_pl', 'is_training_pl', 'pred',
+     'loss', 'train_op', 'merged', 'step']
+)
 
 def get_learning_rate(batch):
     learning_rate = tf.train.exponential_decay(
@@ -93,14 +99,11 @@ def train():
         #sess.run(init)
         sess.run(init, {is_training_pl: True})
 
-        ops = {'pointclouds_pl': pointclouds_pl,
-               'labels_pl': labels_pl,
-               'is_training_pl': is_training_pl,
-               'pred': pred,
-               'loss': loss,
-               'train_op': train_op,
-               'merged': merged,
-               'step': batch}
+        ops = Operations(
+            pointclouds_pl=pointclouds_pl, labels_pl=labels_pl,
+            is_training_pl=is_training_pl, pred=pred, loss=loss,
+            train_op=train_op, merged=merged, step=batch
+        )
 
         for epoch in range(FLAGS.max_epoch):
             logging.info('**** EPOCH %03d ****', epoch)
@@ -122,44 +125,62 @@ def train_one_epoch(sess, ops, train_writer):
     # Shuffle train files
     train_file_idxs = np.arange(0, len(TRAIN_FILES))
     np.random.shuffle(train_file_idxs)
-    
-    for fn in range(len(TRAIN_FILES)):
-        logging.info('---- %s ----', fn)
-        current_data, current_label = provider.loadDataFile(TRAIN_FILES[train_file_idxs[fn]])
-        current_data = current_data[:,0:FLAGS.num_point,:]
-        current_data, current_label, _ = provider.shuffle_data(current_data, np.squeeze(current_label))            
+
+    total_correct = 0
+    total_seen = 0
+    loss_sum = 0
+    num_batches = 0
+
+    for batch_data, batch_labels in data_iter(TEST_FILES):
+        # Augment batched point clouds by rotation and jittering
+        rotated_data = provider.rotate_point_cloud(batch_data)
+        jittered_data = provider.jitter_point_cloud(rotated_data)
+        feed_dict = {ops.pointclouds_pl: jittered_data,
+                     ops.labels_pl: batch_labels,
+                     ops.is_training_pl: is_training,}
+        summary, step, _, loss_val, pred_val = sess.run(
+            [ops.merged, ops.step, ops.train_op, ops.loss, ops.pred],
+            feed_dict=feed_dict
+        )
+        train_writer.add_summary(summary, step)
+        pred_val = np.argmax(pred_val, 1)
+        correct = np.sum(pred_val == batch_labels)
+        total_correct += correct
+        total_seen += FLAGS.batch_size
+        loss_sum += loss_val
+        num_batches += 1
+
+    logging.info('mean loss: %f', loss_sum / float(num_batches))
+    logging.info('accuracy: %f', total_correct / float(total_seen))
+
+
+def shuffle_many(*args):
+    if not args:
+        return []
+    shuffle = np.random.permutation(len(args[0]))
+    return tuple(np.asanyarray(a)[shuffle] for a in args)
+
+
+def data_iter(source_files):
+    shuffle = np.random.permutation(len(source_files))
+    source_files = [source_files[i] for i in shuffle]
+
+    for f in (source_files[i] for i in shuffle):
+        logging.info('---- %s -----', f)
+        # Load data, and take only the amount of points which is allowed
+        current_data, current_label = provider.loadDataFile(f)
+        current_data = current_data[:, 0:FLAGS.num_point, :]
         current_label = np.squeeze(current_label)
-        
-        file_size = current_data.shape[0]
-        num_batches = file_size // FLAGS.batch_size
-        
-        total_correct = 0
-        total_seen = 0
-        loss_sum = 0
-       
+        # Shuffle the data
+        current_data, current_label = shuffle_many((current_data, current_label))
+        num_batches = current_data.shape[0] // FLAGS.batch_size
+
         for batch_idx in range(num_batches):
             start_idx = batch_idx * FLAGS.batch_size
-            end_idx = (batch_idx+1) * FLAGS.batch_size
-            
-            # Augment batched point clouds by rotation and jittering
-            rotated_data = provider.rotate_point_cloud(current_data[start_idx:end_idx, :, :])
-            jittered_data = provider.jitter_point_cloud(rotated_data)
-            feed_dict = {ops['pointclouds_pl']: jittered_data,
-                         ops['labels_pl']: current_label[start_idx:end_idx],
-                         ops['is_training_pl']: is_training,}
-            summary, step, _, loss_val, pred_val = sess.run([ops['merged'], ops['step'],
-                ops['train_op'], ops['loss'], ops['pred']], feed_dict=feed_dict)
-            train_writer.add_summary(summary, step)
-            pred_val = np.argmax(pred_val, 1)
-            correct = np.sum(pred_val == current_label[start_idx:end_idx])
-            total_correct += correct
-            total_seen += FLAGS.batch_size
-            loss_sum += loss_val
+            end_idx = (batch_idx + 1) * FLAGS.batch_size
+            yield current_data[start_idx:end_idx], current_label[start_idx:end_idx]
 
-        logging.info('mean loss: %f', loss_sum / float(num_batches))
-        logging.info('accuracy: %f', total_correct / float(total_seen))
 
-        
 def eval_one_epoch(sess, ops, test_writer):
     """ ops: dict mapping from string to tf ops """
     is_training = False
@@ -168,34 +189,23 @@ def eval_one_epoch(sess, ops, test_writer):
     loss_sum = 0
     total_seen_class = [0] * NUM_CLASSES
     total_correct_class = [0] * NUM_CLASSES
-    
-    for fn in range(len(TEST_FILES)):
-        logging.info('----' + str(fn) + '-----')
-        current_data, current_label = provider.loadDataFile(TEST_FILES[fn])
-        current_data = current_data[:,0:FLAGS.num_point,:]
-        current_label = np.squeeze(current_label)
-        
-        file_size = current_data.shape[0]
-        num_batches = file_size // FLAGS.batch_size
-        
-        for batch_idx in range(num_batches):
-            start_idx = batch_idx * FLAGS.batch_size
-            end_idx = (batch_idx+1) * FLAGS.batch_size
 
-            feed_dict = {ops['pointclouds_pl']: current_data[start_idx:end_idx, :, :],
-                         ops['labels_pl']: current_label[start_idx:end_idx],
-                         ops['is_training_pl']: is_training}
-            summary, step, loss_val, pred_val = sess.run([ops['merged'], ops['step'],
-                ops['loss'], ops['pred']], feed_dict=feed_dict)
-            pred_val = np.argmax(pred_val, 1)
-            correct = np.sum(pred_val == current_label[start_idx:end_idx])
-            total_correct += correct
-            total_seen += FLAGS.batch_size
-            loss_sum += (loss_val*FLAGS.batch_size)
-            for i in range(start_idx, end_idx):
-                l = current_label[i]
-                total_seen_class[l] += 1
-                total_correct_class[l] += (pred_val[i-start_idx] == l)
+    for batch_data, batch_labels in data_iter(TEST_FILES):
+        feed_dict = {ops.pointclouds_pl: batch_data,
+                     ops.labels_pl: batch_labels,
+                     ops.is_training_pl: is_training}
+        summary, step, loss_val, pred_val = sess.run(
+            [ops.merged, ops.step, ops.loss, ops.pred],
+            feed_dict=feed_dict
+        )
+        pred_val = np.argmax(pred_val, 1)
+        correct = np.sum(pred_val == batch_labels)
+        total_correct += correct
+        total_seen += FLAGS.batch_size
+        loss_sum += (loss_val*FLAGS.batch_size)
+        for l, p in zip(batch_labels, pred_val):
+            total_seen_class[l] += 1
+            total_correct_class[l] += (p == l)
             
     logging.info('eval mean loss: %f', loss_sum / float(total_seen))
     logging.info('eval accuracy: %f', total_correct / float(total_seen))
