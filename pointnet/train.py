@@ -20,26 +20,28 @@ Operations = namedtuple(
      'loss', 'train_op', 'merged', 'step']
 )
 
-def get_learning_rate(batch):
+
+def get_learning_rate(batch, base_rate, batch_size, decay_step, decay_rate):
     learning_rate = tf.train.exponential_decay(
-                        FLAGS.learning_rate,  # Base learning rate.
-                        batch * FLAGS.batch_size,  # Current index into the dataset.
-                        FLAGS.decay_step,          # Decay step.
-                        FLAGS.decay_rate,          # Decay rate.
-                        staircase=True)
-    learning_rate = tf.maximum(learning_rate, 0.00001) # CLIP THE LEARNING RATE!
-    return learning_rate        
+        learning_rate=base_rate,
+        global_step=batch * batch_size,
+        decay_steps=decay_step,
+        decay_rate=decay_rate,
+        staircase=True
+    )
+    # CLIP THE LEARNING RATE!
+    return tf.maximum(learning_rate, 0.00001)
 
 
-def get_bn_decay(batch):
+def get_bn_decay(batch, base_rate, batch_size, decay_step, decay_rate=0.5):
     bn_momentum = tf.train.exponential_decay(
-                      BN_INIT_DECAY,
-                      batch * FLAGS.batch_size,
-                      BN_DECAY_DECAY_STEP,
-                      BN_DECAY_DECAY_RATE,
-                      staircase=True)
-    bn_decay = tf.minimum(BN_DECAY_CLIP, 1 - bn_momentum)
-    return bn_decay
+        learning_rate=base_rate,
+        global_step=batch * batch_size,
+        decay_steps=decay_step,
+        decay_rate=decay_rate,
+        staircase=True
+    )
+    return tf.minimum(BN_DECAY_CLIP, 1 - bn_momentum)
 
 
 def train():
@@ -52,7 +54,10 @@ def train():
             # Note the global_step=batch parameter to minimize. 
             # That tells the optimizer to helpfully increment the 'batch' parameter for you every time it trains.
             batch = tf.Variable(0)
-            bn_decay = get_bn_decay(batch)
+            bn_decay = get_bn_decay(
+                batch, base_rate=BN_INIT_DECAY, batch_size=FLAGS.batch_size,
+                decay_step=BN_DECAY_DECAY_STEP, decay_rate=BN_DECAY_DECAY_RATE
+            )
             tf.summary.scalar('bn_decay', bn_decay)
 
             # Get model and loss 
@@ -65,7 +70,11 @@ def train():
             tf.summary.scalar('accuracy', accuracy)
 
             # Get training operator
-            learning_rate = get_learning_rate(batch)
+            learning_rate = get_learning_rate(
+                batch, base_rate=FLAGS.learning_rate,
+                batch_size=FLAGS.batch_size, decay_step=FLAGS.decay_step,
+                decay_rate=FLAGS.decay_rate
+            )
             tf.summary.scalar('learning_rate', learning_rate)
             if FLAGS.optimizer == 'momentum':
                 optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=FLAGS.momentum)
