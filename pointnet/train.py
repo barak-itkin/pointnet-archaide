@@ -33,7 +33,7 @@ def get_learning_rate(batch, base_rate, batch_size, decay_step, decay_rate):
     return tf.maximum(learning_rate, 0.00001)
 
 
-def get_bn_decay(batch, base_rate, batch_size, decay_step, decay_rate=0.5):
+def get_bn_decay(batch, base_rate, batch_size, decay_step, decay_rate=0.5, decay_clip=0.99):
     bn_momentum = tf.train.exponential_decay(
         learning_rate=base_rate,
         global_step=batch * batch_size,
@@ -41,7 +41,7 @@ def get_bn_decay(batch, base_rate, batch_size, decay_step, decay_rate=0.5):
         decay_rate=decay_rate,
         staircase=True
     )
-    return tf.minimum(BN_DECAY_CLIP, 1 - bn_momentum)
+    return tf.minimum(decay_clip, 1 - bn_momentum)
 
 
 def train():
@@ -56,7 +56,8 @@ def train():
             batch = tf.Variable(0)
             bn_decay = get_bn_decay(
                 batch, base_rate=BN_INIT_DECAY, batch_size=FLAGS.batch_size,
-                decay_step=BN_DECAY_DECAY_STEP, decay_rate=BN_DECAY_DECAY_RATE
+                decay_step=BN_DECAY_DECAY_STEP, decay_rate=BN_DECAY_DECAY_RATE,
+                decay_clip=BN_DECAY_CLIP
             )
             tf.summary.scalar('bn_decay', bn_decay)
 
