@@ -96,6 +96,19 @@ def get_model(point_cloud, is_training, n_classes, bn_decay=None, K=3,
     return scores, end_points
 
 
+def get_transform_loss(end_points, reg_weight=0.001):
+    if 'transform' in end_points:
+        transform = end_points['transform']  # BxKxK
+        K = transform.get_shape()[1].value
+        mat_diff = tf.matmul(transform, tf.transpose(transform, perm=[0, 2, 1]))
+        mat_diff -= tf.constant(np.eye(K), dtype=tf.float32)
+        mat_diff_loss = tf.nn.l2_loss(mat_diff)
+    else:
+        mat_diff_loss = 0
+    tf.summary.scalar('mat loss', mat_diff_loss)
+    return mat_diff_loss * reg_weight
+
+
 def get_loss(pred, label, end_points, reg_weight=0.001):
     """ pred: B*NUM_CLASSES,
         label: B, """
@@ -103,18 +116,7 @@ def get_loss(pred, label, end_points, reg_weight=0.001):
     classify_loss = tf.reduce_mean(loss)
     tf.summary.scalar('classify loss', classify_loss)
 
-    # Enforce the transformation as orthogonal matrix
-    if 'transform' in end_points:
-        transform = end_points['transform'] # BxKxK
-        K = transform.get_shape()[1].value
-        mat_diff = tf.matmul(transform, tf.transpose(transform, perm=[0,2,1]))
-        mat_diff -= tf.constant(np.eye(K), dtype=tf.float32)
-        mat_diff_loss = tf.nn.l2_loss(mat_diff)
-        tf.summary.scalar('mat loss', mat_diff_loss)
-    else:
-        mat_diff_loss = 0
-
-    return classify_loss + mat_diff_loss * reg_weight
+    return classify_loss + get_transform_loss(end_points, reg_weight)
 
 
 if __name__=='__main__':
