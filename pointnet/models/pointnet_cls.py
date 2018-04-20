@@ -10,16 +10,20 @@ def placeholder_inputs(batch_size, num_point, K=3):
     return pointclouds_pl, labels_pl
 
 
-def get_model_features(point_cloud, is_training, bn_decay=None, K=3):
+def get_model_features(point_cloud, is_training, bn_decay=None, K=3,
+        input_transformer=True, feature_transformer=True):
     """ Classification PointNet, input is BxNxK, output Bx40 """
     end_points = {}
 
-    with tf.variable_scope('transform_net1') as sc:
-        transform = input_transform_net(point_cloud, is_training, bn_decay, K=K)
-    point_cloud_transformed = tf.matmul(point_cloud, transform)
-    # Shape the pointcloud as an image with one channel (append an axis)
-    # BxNxKx1
-    input_image = tf.expand_dims(point_cloud_transformed, -1)
+    if input_transformer:
+        with tf.variable_scope('transform_net1') as sc:
+            transform = input_transform_net(point_cloud, is_training, bn_decay, K=K)
+        point_cloud_transformed = tf.matmul(point_cloud, transform)
+        # Shape the pointcloud as an image with one channel (append an axis)
+        # BxNxKx1
+        input_image = tf.expand_dims(point_cloud_transformed, -1)
+    else:
+        input_image = tf.expand_dims(point_cloud, -1)
 
     # BxNx1x64
     net = tf_util.conv2d(input_image, 64, [1,K],
@@ -32,13 +36,16 @@ def get_model_features(point_cloud, is_training, bn_decay=None, K=3):
                          bn=True, is_training=is_training,
                          scope='conv2', bn_decay=bn_decay)
 
-    with tf.variable_scope('transform_net2') as sc:
-        transform = feature_transform_net(net, is_training, bn_decay, K=64)
-    end_points['transform'] = transform
-    # BxNx64
-    net_transformed = tf.matmul(tf.squeeze(net, axis=[2]), transform)
-    # BxNx1x64
-    net_transformed = tf.expand_dims(net_transformed, [2])
+    if feature_transformer:
+        with tf.variable_scope('transform_net2') as sc:
+            transform = feature_transform_net(net, is_training, bn_decay, K=64)
+        end_points['transform'] = transform
+        # BxNx64
+        net_transformed = tf.matmul(tf.squeeze(net, axis=[2]), transform)
+        # BxNx1x64
+        net_transformed = tf.expand_dims(net_transformed, [2])
+    else:
+        net_transformed = net
 
     # BxNx1x64
     net = tf_util.conv2d(net_transformed, 64, [1,1],
@@ -77,10 +84,14 @@ def get_model_scores(model_features, is_training, n_classes, bn_decay=None):
     return tf_util.fully_connected(net, n_classes, activation_fn=None, scope='fc3')
 
 
-def get_model(point_cloud, is_training, n_classes, bn_decay=None, K=3):
+def get_model(point_cloud, is_training, n_classes, bn_decay=None, K=3,
+              input_transformer=True, feature_transformer=True):
     """ Classification PointNet, input is BxNxK, output Bx40 """
-    model_features, end_points = get_model_features(point_cloud, is_training,
-                                                    bn_decay=bn_decay, K=K)
+    model_features, end_points = get_model_features(
+        point_cloud, is_training, bn_decay=bn_decay, K=K,
+        input_transformer=input_transformer,
+        feature_transformer=feature_transformer
+    )
     scores = get_model_scores(model_features, is_training, n_classes, bn_decay)
     return scores, end_points
 
@@ -93,12 +104,15 @@ def get_loss(pred, label, end_points, reg_weight=0.001):
     tf.summary.scalar('classify loss', classify_loss)
 
     # Enforce the transformation as orthogonal matrix
-    transform = end_points['transform'] # BxKxK
-    K = transform.get_shape()[1].value
-    mat_diff = tf.matmul(transform, tf.transpose(transform, perm=[0,2,1]))
-    mat_diff -= tf.constant(np.eye(K), dtype=tf.float32)
-    mat_diff_loss = tf.nn.l2_loss(mat_diff) 
-    tf.summary.scalar('mat loss', mat_diff_loss)
+    if 'transform' in end_points:
+        transform = end_points['transform'] # BxKxK
+        K = transform.get_shape()[1].value
+        mat_diff = tf.matmul(transform, tf.transpose(transform, perm=[0,2,1]))
+        mat_diff -= tf.constant(np.eye(K), dtype=tf.float32)
+        mat_diff_loss = tf.nn.l2_loss(mat_diff)
+        tf.summary.scalar('mat loss', mat_diff_loss)
+    else:
+        mat_diff_loss = 0
 
     return classify_loss + mat_diff_loss * reg_weight
 
