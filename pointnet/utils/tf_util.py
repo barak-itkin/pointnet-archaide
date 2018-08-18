@@ -159,13 +159,21 @@ def conv2d(inputs,
       biases = _variable_on_cpu('biases', [num_output_channels],
                                 tf.constant_initializer(0.0))
       outputs = tf.nn.bias_add(outputs, biases)
+      outputs = tf.identity(outputs, name='conv_raw_out')
 
       if bn:
         outputs = batch_norm_for_conv2d(outputs, is_training,
                                         bn_decay=bn_decay, scope='bn')
+        outputs = tf.identity(outputs, name='conv_bn_out')
 
       if activation_fn is not None:
         outputs = activation_fn(outputs)
+        outputs = tf.identity(
+            outputs,
+            name='conv_activ_out' if not bn else 'conv_activ_bn_out'
+        )
+
+      outputs = tf.identity(outputs, name='out')
       return outputs
 
 
@@ -338,12 +346,20 @@ def fully_connected(inputs,
     biases = _variable_on_cpu('biases', [num_outputs],
                              tf.constant_initializer(0.0))
     outputs = tf.nn.bias_add(outputs, biases)
-     
+    outputs = tf.identity(outputs, name='fc_raw_out')
+
     if bn:
       outputs = batch_norm_for_fc(outputs, is_training, bn_decay, 'bn')
+      outputs = tf.identity(outputs, name='fc_bn_out')
 
     if activation_fn is not None:
       outputs = activation_fn(outputs)
+      outputs = tf.identity(
+          outputs,
+          name='fc_activ_out' if not bn else 'fc_activ_bn_out'
+      )
+
+    outputs = tf.identity(outputs, name='out')
     return outputs
 
 

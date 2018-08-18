@@ -104,12 +104,12 @@ def get_transform_loss(end_points, reg_weight=0.001):
         mat_diff -= tf.constant(np.eye(K), dtype=tf.float32)
         mat_diff_loss = tf.nn.l2_loss(mat_diff)
     else:
-        mat_diff_loss = 0
+        mat_diff_loss = tf.constant(0, dtype=tf.float32)
     tf.summary.scalar('mat loss', mat_diff_loss)
     return mat_diff_loss * reg_weight
 
 
-def get_loss(pred, label, end_points, reg_weight=0.001):
+def get_loss(pred, label, end_points, reg_weight=0.0001):
     """ pred: B*NUM_CLASSES,
         label: B, """
     loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=pred, labels=label)
