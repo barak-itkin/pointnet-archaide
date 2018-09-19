@@ -11,7 +11,8 @@ def placeholder_inputs(batch_size, num_point, K=3):
 
 
 def get_model_features(point_cloud, is_training, bn_decay=None, K=3,
-        input_transformer=True, feature_transformer=True):
+                       input_transformer=True, feature_transformer=True,
+                       reduce_max=False, name_suffix=''):
     """ Classification PointNet, input is BxNxK, output Bx40 """
     end_points = {}
 
@@ -29,12 +30,12 @@ def get_model_features(point_cloud, is_training, bn_decay=None, K=3,
     net = tf_util.conv2d(input_image, 64, [1,K],
                          padding='VALID', stride=[1,1],
                          bn=True, is_training=is_training,
-                         scope='conv1', bn_decay=bn_decay)
+                         scope='conv1' + name_suffix, bn_decay=bn_decay)
     # BxNx1x64
     net = tf_util.conv2d(net, 64, [1,1],
                          padding='VALID', stride=[1,1],
                          bn=True, is_training=is_training,
-                         scope='conv2', bn_decay=bn_decay)
+                         scope='conv2' + name_suffix, bn_decay=bn_decay)
 
     if feature_transformer:
         with tf.variable_scope('transform_net2') as sc:
@@ -51,25 +52,58 @@ def get_model_features(point_cloud, is_training, bn_decay=None, K=3,
     net = tf_util.conv2d(net_transformed, 64, [1,1],
                          padding='VALID', stride=[1,1],
                          bn=True, is_training=is_training,
-                         scope='conv3', bn_decay=bn_decay)
+                         scope='conv3' + name_suffix, bn_decay=bn_decay)
     # BxNx1x128
     net = tf_util.conv2d(net, 128, [1,1],
                          padding='VALID', stride=[1,1],
                          bn=True, is_training=is_training,
-                         scope='conv4', bn_decay=bn_decay)
+                         scope='conv4' + name_suffix, bn_decay=bn_decay)
     # BxNx1x1024
     net = tf_util.conv2d(net, 1024, [1,1],
                          padding='VALID', stride=[1,1],
                          bn=True, is_training=is_training,
-                         scope='conv5', bn_decay=bn_decay)
+                         scope='conv5' + name_suffix, bn_decay=bn_decay)
 
     # BxNx1024
     net = tf.squeeze(net, axis=2)
     # Symmetric function: max pooling
     # Bx1024
-    net = tf.reduce_max(net, axis=1)
+    if reduce_max:
+        net = tf.reduce_max(net, axis=1)
 
     return net, end_points
+
+
+def get_model_multi_features(point_cloud, names, Ks, is_training, bn_decay=None,
+                             input_transformer=True, feature_transformer=True):
+    vals = []  # Each value is BxNx1024
+    skip = 0
+    for name, K in zip(names, Ks):
+        val, _ =get_model_features(
+            point_cloud=point_cloud[:, :, skip:(skip + K)], K=K, is_training=is_training, bn_decay=bn_decay,
+            input_transformer=input_transformer, feature_transformer=feature_transformer,
+            reduce_max=False, name_suffix='_' + name
+        )
+        vals.append(val)
+        skip += K
+
+    net = tf.concat(vals, axis=1)
+    # Each value is BxNx1x...
+    net = tf.expand_dims(net, axis=2)
+    # BxNx1x1024
+    net = tf_util.conv2d(net, 1024, [1,1],
+                         padding='VALID', stride=[1,1],
+                         bn=True, is_training=is_training,
+                         scope='conv_combine1', bn_decay=bn_decay)
+    # BxNx1x1024
+    net = tf_util.conv2d(net, 1024, [1,1],
+                         padding='VALID', stride=[1,1],
+                         bn=True, is_training=is_training,
+                         scope='conv_combine2', bn_decay=bn_decay)
+
+    net = tf.squeeze(net, axis=2)
+    net = tf.reduce_max(net, axis=1)
+    return net
 
 
 def get_model_scores(model_features, is_training, n_classes, bn_decay=None):
