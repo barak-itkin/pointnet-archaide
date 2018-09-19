@@ -73,11 +73,11 @@ def get_model_features(point_cloud, is_training, bn_decay=None, K=3,
 
 
 def get_model_scores(model_features, is_training, n_classes, bn_decay=None):
-    net = tf_util.fully_connected(model_features, 512, bn=True, is_training=is_training,
+    net = tf_util.fully_connected(model_features, 512, bn=False, is_training=is_training,
                                   scope='fc1', bn_decay=bn_decay)
     net = tf_util.dropout(net, keep_prob=0.7, is_training=is_training,
                           scope='dp1')
-    net = tf_util.fully_connected(net, 256, bn=True, is_training=is_training,
+    net = tf_util.fully_connected(net, 256, bn=False, is_training=is_training,
                                   scope='fc2', bn_decay=bn_decay)
     net = tf_util.dropout(net, keep_prob=0.7, is_training=is_training,
                           scope='dp2')
