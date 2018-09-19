@@ -93,13 +93,8 @@ def get_model_multi_features(point_cloud, names, Ks, is_training, bn_decay=None,
     # BxNx1x1024
     net = tf_util.conv2d(net, 1024, [1,1],
                          padding='VALID', stride=[1,1],
-                         bn=True, is_training=is_training,
+                         bn=False, is_training=is_training,
                          scope='conv_combine1', bn_decay=bn_decay)
-    # BxNx1x1024
-    net = tf_util.conv2d(net, 1024, [1,1],
-                         padding='VALID', stride=[1,1],
-                         bn=True, is_training=is_training,
-                         scope='conv_combine2', bn_decay=bn_decay)
 
     net = tf.squeeze(net, axis=2)
     net = tf.reduce_max(net, axis=1)
