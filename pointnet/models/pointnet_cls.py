@@ -12,7 +12,7 @@ def placeholder_inputs(batch_size, num_point, K=3):
 
 def get_model_features(point_cloud, is_training, bn_decay=None, K=3,
                        input_transformer=True, feature_transformer=True,
-                       reduce_max=False, name_suffix=''):
+                       reduce_max=False, name_suffix='', skip_last=False):
     """ Classification PointNet, input is BxNxK, output Bx40 """
     end_points = {}
 
@@ -59,10 +59,11 @@ def get_model_features(point_cloud, is_training, bn_decay=None, K=3,
                          bn=True, is_training=is_training,
                          scope='conv4' + name_suffix, bn_decay=bn_decay)
     # BxNx1x1024
-    net = tf_util.conv2d(net, 1024, [1,1],
-                         padding='VALID', stride=[1,1],
-                         bn=True, is_training=is_training,
-                         scope='conv5' + name_suffix, bn_decay=bn_decay)
+    if not skip_last:
+        net = tf_util.conv2d(net, 1024, [1,1],
+                             padding='VALID', stride=[1,1],
+                             bn=True, is_training=is_training,
+                             scope='conv5' + name_suffix, bn_decay=bn_decay)
 
     # BxNx1024
     net = tf.squeeze(net, axis=2)
@@ -79,10 +80,10 @@ def get_model_multi_features(point_cloud, names, Ks, is_training, bn_decay=None,
     vals = []  # Each value is BxNx1024
     skip = 0
     for name, K in zip(names, Ks):
-        val, _ =get_model_features(
+        val, _ = get_model_features(
             point_cloud=point_cloud[:, :, skip:(skip + K)], K=K, is_training=is_training, bn_decay=bn_decay,
             input_transformer=input_transformer, feature_transformer=feature_transformer,
-            reduce_max=False, name_suffix='_' + name
+            reduce_max=False, name_suffix='_' + name, skip_last=True
         )
         vals.append(val)
         skip += K
