@@ -35,7 +35,7 @@ def get_model_features(point_cloud, is_training, bn_decay=None, K=3,
     debug['conv1'] = net
 
     # BxNx1x64
-    net = tf_util.conv2d(net, 64, [5,1],
+    net = tf_util.conv2d(net, 64, [1,1],
                          padding='VALID', stride=[1,1],
                          bn=False, is_training=is_training,
                          scope='conv2' + name_suffix, bn_decay=bn_decay)
@@ -53,13 +53,13 @@ def get_model_features(point_cloud, is_training, bn_decay=None, K=3,
         net_transformed = net
 
     # BxNx1x64
-    net = tf_util.conv2d(net_transformed, 64, [5,1],
+    net = tf_util.conv2d(net_transformed, 64, [1,1],
                          padding='VALID', stride=[1,1],
                          bn=False, is_training=is_training,
                          scope='conv3' + name_suffix, bn_decay=bn_decay)
     debug['conv3'] = net
     # BxNx1x128
-    net = tf_util.conv2d(net, 128, [5,1],
+    net = tf_util.conv2d(net, 128, [1,1],
                          padding='VALID', stride=[1,1],
                          bn=False, is_training=is_training,
                          scope='conv4' + name_suffix, bn_decay=bn_decay)
