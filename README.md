@@ -1,5 +1,5 @@
 # PointNet-ArchAIDE - A fork of PointNet
-This repository is a fork of the PointNet code ([charlesq34/pointnet](https://github.com/charlesq34/pointnet), original readme attached below) to support additional usecases by the ArchAIDE project. 
+This repository is a fork of the PointNet code ([charlesq34/pointnet](https://github.com/charlesq34/pointnet), original readme attached below) to support additional usecases by the ArchAIDE project. See more info about the code used for the ArchAIDE project at [barak-itkin/archaide-software](https://github.com/barak-itkin/archaide-software).
 
 ---
 
